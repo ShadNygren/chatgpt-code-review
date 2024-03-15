@@ -1,16 +1,32 @@
 import logging
 from textwrap import dedent
 from typing import Iterable
-
 import openai
-import streamlit as st
 import tiktoken
+
+
+# Define the function if it's not already imported from somewhere else
+def get_num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
+    """
+    Calculate the number of tokens used by a list of messages.
+
+    This is a simplified implementation. You might need to adjust
+    it based on your actual requirements and the specifics of how
+    the messages are structured and tokenized.
+    """
+    # Assuming 'tiktoken' can provide an encoding for the specified model,
+    # and you've instantiated it correctly elsewhere in your code.
+    encoding = tiktoken.encoding_for_model(model)
+    num_tokens = 0
+    for message in messages:
+        content = message.get("content", "")
+        num_tokens += len(encoding.encode(content))
+    return num_tokens
 
 
 def analyze_code_files(code_files: list[str]) -> Iterable[dict[str, str]]:
     """Analyze the selected code files and return recommendations."""
     return (analyze_code_file(code_file) for code_file in code_files)
-
 
 def analyze_code_file(code_file: str) -> dict[str, str]:
     """Analyze a code file and return a dictionary with file information and recommendations."""
@@ -38,89 +54,45 @@ def analyze_code_file(code_file: str) -> dict[str, str]:
     }
 
 
-def get_num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
-    """Returns the number of tokens used by a list of messages."""
-    # Source: https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
-    try:
-        encoding = tiktoken.encoding_for_model(model)
-    except KeyError:
-        logging.debug("Model not found. Using cl100k_base encoding.")
-        encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-3.5-turbo":
-        logging.debug(
-            "gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301."
-        )
-        return get_num_tokens_from_messages(
-            messages, model="gpt-3.5-turbo-0301"
-        )
-    elif model == "gpt-4":
-        logging.debug(
-            "gpt-4 may change over time. Returning num tokens assuming gpt-4-0314."
-        )
-        return get_num_tokens_from_messages(messages, model="gpt-4-0314")
-    elif model == "gpt-3.5-turbo-0301":
-        tokens_per_message = (
-            4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
-        )
-        tokens_per_name = -1  # if there's a name, the role is omitted
-    elif model == "gpt-4-0314":
-        tokens_per_message = 3
-        tokens_per_name = 1
-    else:
-        raise NotImplementedError(
-            f"""num_tokens_from_messages() is not implemented for model {model}. See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens."""
-        )
-    num_tokens = 0
-    for message in messages:
-        num_tokens += tokens_per_message
-        for key, value in message.items():
-            num_tokens += len(encoding.encode(value))
-            if key == "name":
-                num_tokens += tokens_per_name
-    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
-    return num_tokens
-
-
-@st.cache_data(show_spinner=False)
 def get_code_analysis(code: str) -> str:
     """Get code analysis from the OpenAI API."""
     prompt = dedent(
         f"""\
-Please review the code below and identify any syntax or logical errors, suggest
-ways to refactor and improve code quality, enhance performance, address security
-concerns, and align with best practices. Provide specific examples for each area
-and limit your recommendations to three per category.
+        Please review the code below and identify any syntax or logical errors, suggest
+        ways to refactor and improve code quality, enhance performance, address security
+        concerns, and align with best practices. Provide specific examples for each area
+        and limit your recommendations to three per category.
 
-Use the following response format, keeping the section headings as-is, and provide
-your feedback. Use bullet points for each response. The provided examples are for
-illustration purposes only and should not be repeated.
+        Use the following response format, keeping the section headings as-is, and provide
+        your feedback. Use bullet points for each response. The provided examples are for
+        illustration purposes only and should not be repeated.
 
-**Syntax and logical errors (example)**:
-- Incorrect indentation on line 12
-- Missing closing parenthesis on line 23
+        **Syntax and logical errors (example)**:
+        - Incorrect indentation on line 12
+        - Missing closing parenthesis on line 23
 
-**Code refactoring and quality (example)**:
-- Replace multiple if-else statements with a switch case for readability
-- Extract repetitive code into separate functions
+        **Code refactoring and quality (example)**:
+        - Replace multiple if-else statements with a switch case for readability
+        - Extract repetitive code into separate functions
 
-**Performance optimization (example)**:
-- Use a more efficient sorting algorithm to reduce time complexity
-- Cache results of expensive operations for reuse
+        **Performance optimization (example)**:
+        - Use a more efficient sorting algorithm to reduce time complexity
+        - Cache results of expensive operations for reuse
 
-**Security vulnerabilities (example)**:
-- Sanitize user input to prevent SQL injection attacks
-- Use prepared statements for database queries
+        **Security vulnerabilities (example)**:
+        - Sanitize user input to prevent SQL injection attacks
+        - Use prepared statements for database queries
 
-**Best practices (example)**:
-- Add meaningful comments and documentation to explain the code
-- Follow consistent naming conventions for variables and functions
+        **Best practices (example)**:
+        - Add meaningful comments and documentation to explain the code
+        - Follow consistent naming conventions for variables and functions
 
-Code:
-```
-{code}
-```
+        Code:
+        ```
+        {code}
+        ```
 
-Your review:"""
+        Your review:"""
     )
     messages = [{"role": "system", "content": prompt}]
     tokens_in_messages = get_num_tokens_from_messages(

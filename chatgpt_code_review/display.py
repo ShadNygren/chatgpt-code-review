@@ -1,22 +1,21 @@
 import re
 from typing import Optional
 
-import streamlit as st
 from utils import EXTENSION_TO_LANGUAGE_MAP
 
-
+# This function remains unchanged as it does not depend on Streamlit
 def extension_to_language(file_extension: str) -> Optional[str]:
     """Return the programming language corresponding to a given file extension."""
     return EXTENSION_TO_LANGUAGE_MAP.get(file_extension.lower(), None)
 
-
-def display_code(code: str, extension: str) -> None:
-    """Display the code snippet in the specified language."""
+# Modify this function to simply return the markdown code
+def display_code(code: str, extension: str) -> str:
+    """Return the code snippet formatted as markdown in the specified language."""
     language = extension_to_language(extension)
     markdown_code = f"```{language}\n{code}\n```"
-    st.markdown(markdown_code)
+    return markdown_code
 
-
+# This function remains unchanged as it does not depend on Streamlit
 def escape_markdown(text: str) -> str:
     """Escape markdown characters in a string."""
     escape_chars = [
@@ -39,15 +38,16 @@ def escape_markdown(text: str) -> str:
     regex = re.compile("|".join(map(re.escape, escape_chars)))
     return regex.sub(r"\\\g<0>", text)
 
-
-def generate_markdown(recommendations):
+# Assuming this function generates markdown for recommendations
+# and does not directly depend on Streamlit for its core functionality
+def generate_markdown(recommendations) -> str:
     markdown_str = "# ChatGPT Code Review Recommendations\n\n"
 
     for rec in recommendations:
         code_file = rec["code_file"]
         recommendation = rec["recommendation"] or "No recommendations"
-
-        markdown_str += f"## {code_file}\n\n"
-        markdown_str += f"{recommendation}\n\n"
+        # Use escape_markdown to handle any markdown characters in file names or recommendations
+        markdown_str += f"## {escape_markdown(code_file)}\n\n"
+        markdown_str += f"{escape_markdown(recommendation)}\n\n"
 
     return markdown_str

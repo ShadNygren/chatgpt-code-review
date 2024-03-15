@@ -1,7 +1,9 @@
 import logging
 from textwrap import dedent
 from typing import Iterable
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 import tiktoken
 
 
@@ -106,16 +108,14 @@ def get_code_analysis(code: str) -> str:
 
     logging.info("Sending request to OpenAI API for code analysis")
     logging.info("Max response tokens: %d", tokens_for_response)
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=tokens_for_response,
-        n=1,
-        temperature=0,
-    )
+    response = client.chat.completions.create(model="gpt-3.5-turbo",
+    messages=messages,
+    max_tokens=tokens_for_response,
+    n=1,
+    temperature=0)
     logging.info("Received response from OpenAI API")
 
     # Get the assistant's response from the API response
-    assistant_response = response.choices[0].message["content"]
+    assistant_response = response.choices[0].message.content
 
     return assistant_response.strip()

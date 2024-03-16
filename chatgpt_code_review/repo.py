@@ -6,6 +6,7 @@ def list_code_files_in_repository(repo_url: str, extensions: list[str] = None) -
     """Clone the GitHub repository and return a list of code files with the specified extensions."""
     if extensions is None:
         extensions = []  # Default to an empty list if no extensions are provided
+    print("ShadDEBUG - repo.py list_code_files_in_repository about to clone_github_repository")
     print("ShadDEBUG repo_url = " + repo_url)
     local_path = clone_github_repository(repo_url)
     print("ShadDEBUG local_path = " + local_path)
@@ -18,11 +19,19 @@ def clone_github_repository(repo_url: str) -> str:
     local_path = repo_url.split("/")[-1]
     print("ShadDEBUG local_path = " + local_path)
 
-    if not os.path.exists(local_path):
+    absolute_path = "/home/dell/github/ShadNygren/chatgpt-code-review/chatgpt_code_review/" + local_path
+    print("ShadDEBUG absolute_path = " + absolute_path)
+    print("ShadDEBUG File location using os.getcwd():", os.getcwd())
+    #if not os.path.exists(local_path):
+    if not os.path.isdir("./" + local_path):
+    #if not os.path.isdir(absolute_path):
         Repo.clone_from(repo_url, local_path)
+        #Repo.clone_from(repo_url, absolute_path)
         print("ShadDEBUG - should be after Repo.clone")
     else:
+        print("ShadDEBUG local_path = " + local_path)
         print("ShadDEBUG - os.path.exists(local_path) = " + str(os.path.exists(local_path)))
+        print("ShadDEBUG - os.path.isdir(local_path) = " + str(os.path.isdir(local_path)))
 
     return local_path
 

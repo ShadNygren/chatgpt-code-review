@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 from textwrap import dedent
@@ -29,16 +30,16 @@ MODEL_NAME = "WizardLM/WizardLM-13B-V1.2"
 #    # Implementation remains the same
 #    pass
 
-# Using original since identical
-#def analyze_code_files_new(code_files: list[str]) -> Iterable[dict[str, str]]:
-#    """Analyze the selected code files and return recommendations."""
-#    return (analyze_code_file(code_file) for code_file in code_files)
+# Original renamed and suffixed since identical
+def analyze_code_files(code_files: list[str]) -> Iterable[dict[str, str]]:
+    """Analyze the selected code files and return recommendations."""
+    return (analyze_code_file(code_file) for code_file in code_files)
 
 # This is the new version with support for local
 # The original version was renamed and suffixed with _original
 def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
     """Analyze a code file and return a dictionary with file information and recommendations."""
-    with open(code_file, "r") as f:
+    with open("/tmp/chatgpt-code-review/" + code_file, "r") as f:
         code_content = f.read()
 
     if not code_content:
@@ -47,7 +48,7 @@ def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
     try:
         logging.info("Analyzing code file: %s", code_file)
         if use_local_model:
-            analysis = get_local_model_analysis(code_content)
+            analysis = get_local_code_analysis(code_content)
         else:
             analysis = get_code_analysis(code_content)
     except Exception as e:
@@ -57,7 +58,7 @@ def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
     return {"code_file": code_file, "code_snippet": code_content, "recommendation": analysis}
 
 # This is new for local
-def get_local_model_analysis(code: str) -> str:
+def get_local_code_analysis(code: str) -> str:
     """Analyze code using a local model."""
     generator = pipeline('text-generation', model=MODEL_NAME, device=0)  # device=0 for GPU
     set_seed(42)
@@ -77,72 +78,15 @@ def get_local_model_analysis(code: str) -> str:
 #    """Get code analysis from the OpenAI API. Implementation remains the same."""
 #    pass
 
+def read_prompt_from_file(filename):
+    with open(filename, "r") as file:
+        return file.read().strip()
+
 def generate_analysis_prompt(code: str) -> str:
     """Generates a prompt for analyzing code. Can be shared by both OpenAI and local model functions."""
     # This function generates the prompt text that you were previously creating in get_code_analysis.
     # Refactor prompt generation here to avoid repetition.
-    pass
-
-# Update the part where you call analyze_code_file to include use_local_model based on user's choice.
-
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# End New Stuff for Local
-#-------------------------------------------------
-# Original Stuff
-#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-
-# Define the function if it's not already imported from somewhere else
-def get_num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
-    """
-    Calculate the number of tokens used by a list of messages.
-
-    This is a simplified implementation. You might need to adjust
-    it based on your actual requirements and the specifics of how
-    the messages are structured and tokenized.
-    """
-    # Assuming 'tiktoken' can provide an encoding for the specified model,
-    # and you've instantiated it correctly elsewhere in your code.
-    encoding = tiktoken.encoding_for_model(model)
-    num_tokens = 0
-    for message in messages:
-        content = message.get("content", "")
-        num_tokens += len(encoding.encode(content))
-    return num_tokens
-
-
-def analyze_code_files(code_files: list[str]) -> Iterable[dict[str, str]]:
-    """Analyze the selected code files and return recommendations."""
-    return (analyze_code_file(code_file) for code_file in code_files)
-
-# Renamed and suffixed with _original
-def analyze_code_file_original(code_file: str) -> dict[str, str]:
-    """Analyze a code file and return a dictionary with file information and recommendations."""
-    with open(code_file, "r") as f:
-        code_content = f.read()
-
-    if not code_content:
-        return {
-            "code_file": code_file,
-            "code_snippet": code_content,
-            "recommendation": "No code found in file",
-        }
-
-    try:
-        logging.info("Analyzing code file: %s", code_file)
-        analysis = get_code_analysis(code_content)
-    except Exception as e:
-        logging.info("Error analyzing code file: %s", code_file)
-        analysis = f"Error analyzing code file: {e}"
-
-    return {
-        "code_file": code_file,
-        "code_snippet": code_content,
-        "recommendation": analysis,
-    }
-
-
-def get_code_analysis(code: str) -> str:
-    """Get code analysis from the OpenAI API."""
+    #prompt = read_prompt_from_file("prompt.txt")
     prompt = dedent(
         f"""\
         Please review the code below and identify any syntax or logical errors, suggest
@@ -181,6 +125,70 @@ def get_code_analysis(code: str) -> str:
 
         Your review:"""
     )
+    pass
+
+# Update the part where you call analyze_code_file to include use_local_model based on user's choice.
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# End New Stuff for Local
+#-------------------------------------------------
+# Original Stuff
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+# Define the function if it's not already imported from somewhere else
+def get_num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
+    """
+    Calculate the number of tokens used by a list of messages.
+
+    This is a simplified implementation. You might need to adjust
+    it based on your actual requirements and the specifics of how
+    the messages are structured and tokenized.
+    """
+    # Assuming 'tiktoken' can provide an encoding for the specified model,
+    # and you've instantiated it correctly elsewhere in your code.
+    encoding = tiktoken.encoding_for_model(model)
+    num_tokens = 0
+    for message in messages:
+        content = message.get("content", "")
+        num_tokens += len(encoding.encode(content))
+    return num_tokens
+
+
+def analyze_code_files_original(code_files: list[str]) -> Iterable[dict[str, str]]:
+    """Analyze the selected code files and return recommendations."""
+    return (analyze_code_file("/tmp/chatgpt-code-review/" + code_file) for code_file in code_files)
+
+# Renamed and suffixed with _original
+def analyze_code_file_original(code_file: str) -> dict[str, str]:
+    """Analyze a code file and return a dictionary with file information and recommendations."""
+    with open(code_file, "r") as f:
+        code_content = f.read()
+
+    if not code_content:
+        return {
+            "code_file": code_file,
+            "code_snippet": code_content,
+            "recommendation": "No code found in file",
+        }
+
+    try:
+        logging.info("Analyzing code file: %s", code_file)
+        analysis = get_code_analysis(code_content)
+    except Exception as e:
+        logging.info("Error analyzing code file: %s", code_file)
+        analysis = f"Error analyzing code file: {e}"
+
+    return {
+        "code_file": code_file,
+        "code_snippet": code_content,
+        "recommendation": analysis,
+    }
+
+
+def get_code_analysis(code: str) -> str:
+    """Get code analysis from the OpenAI API."""
+    prompt = generate_analysis_prompt(code=code)
+
     #model="gpt-3.5-turbo"
     model="gpt-4-turbo-preview"
     messages = [{"role": "system", "content": prompt}]

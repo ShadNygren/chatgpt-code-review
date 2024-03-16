@@ -25,6 +25,7 @@ def analyze_repo(repo_url, extensions, openai_api_key):
         print("repo_url = " + repo_url)
         print("extensions = " + str(extensions))
         # Clone the repository and list code files
+        print("ShadDEBUG about to list_code_files_in_repository")
         code_files = repo.list_code_files_in_repository(repo_url, extensions)
         
         if not code_files:

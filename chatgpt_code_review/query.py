@@ -33,6 +33,19 @@ MODEL_NAME = "WizardLM/WizardLM-13B-V1.2"
 #    pass
 
 
+def run_pytype(filename):
+    """Run pytype on the specified file and return the report as a string."""
+    # Build the command to run pylint
+    #command = ['pytype', filename, '--output-format=text']
+    command = ['pytype', filename]
+    
+    # Run the command
+    result = subprocess.run(command, capture_output=True, text=True)
+    
+    # Return the pylint output
+    return result.stdout
+
+
 def run_pylint(filename):
     """Run pylint on the specified file and return the report as a string."""
     # Build the command to run pylint
@@ -63,15 +76,17 @@ def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
 
     pylint_report = run_pylint(code_file)
     #print(pylint_report)
+    pytype_report = run_pytype(code_file)
+
     try:
         logging.info("Analyzing code file: %s", code_file)
         print("ShadDEBUG - code content = " + code_content)
         if use_local_model:
             print("ShadDEBUG - get_local_code_analysis in query.py")
-            analysis = get_local_code_analysis(code_content, pylint_report)
+            analysis = get_local_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
         else:
             print("ShadDEBUG - get_code_analysis in query.py")
-            analysis = get_code_analysis(code_content, pylint_report)
+            analysis = get_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
     except Exception as e:
         print("ShadDEBUG Exception e = " + str(e))
         logging.error("Error analyzing code file: %s", code_file)
@@ -80,13 +95,13 @@ def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
     return {"code_file": code_file, "code_snippet": code_content, "recommendation": analysis}
 
 # This is new for local
-def get_local_code_analysis(code: str, pylint_report: str) -> str:
+def get_local_code_analysis(code: str, pylint_report: str, pytype_report: str) -> str:
     """Analyze code using a local model."""
     generator = pipeline('text-generation', model=MODEL_NAME, device=0)  # device=0 for GPU
     set_seed(42)
 
     prompt = dedent(f"""\
-        {generate_analysis_prompt(code, pylint_report)}
+        {generate_analysis_prompt(code=code, pylint_report=pylint_report, pytype_report=pytype_report)}
     """)
 
     responses = generator(prompt, max_length=500, num_return_sequences=1)
@@ -104,7 +119,7 @@ def read_prompt_from_file(filename):
     with open(filename, "r") as file:
         return file.read().strip()
 
-def generate_analysis_prompt(code: str, pylint_report) -> str:
+def generate_analysis_prompt(code: str, pylint_report: str, pytype_report: str) -> str:
     """Generates a prompt for analyzing code. Can be shared by both OpenAI and local model functions."""
     # This function generates the prompt text that you were previously creating in get_code_analysis.
     # Refactor prompt generation here to avoid repetition.
@@ -150,6 +165,11 @@ def generate_analysis_prompt(code: str, pylint_report) -> str:
         {pylint_report}
         ```
 
+        PyType Report:
+        ```
+        {pytype_report}
+        ```
+
         Your review:"""
     )
     #pass
@@ -164,7 +184,7 @@ def generate_analysis_prompt(code: str, pylint_report) -> str:
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 # Define the function if it's not already imported from somewhere else
-def get_num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
+def get_num_tokens_from_messages(messages, model: str):
     """
     Calculate the number of tokens used by a list of messages.
 
@@ -221,21 +241,23 @@ def analyze_code_file_original(code_file: str) -> dict[str, str]:
     }
 
 
-def get_code_analysis(code: str, pylint_report: str) -> str:
+def get_code_analysis(code: str, pylint_report: str, pytype_report: str) -> str:
     """Get code analysis from the OpenAI API."""
     print("ShadDEBUG - get_code_analysis 1")
-    prompt = generate_analysis_prompt(code=code, pylint_report=pylint_report)
+    prompt = generate_analysis_prompt(code=code, pylint_report=pylint_report, pytype_report=pytype_report)
     print("ShadDEBUG - get_code_analysis 2")
 
-    model="gpt-3.5-turbo"
-    #model="gpt-4-turbo-preview"
+    #model="gpt-3.5-turbo"
+    model="gpt-4-turbo-preview"
+    
     messages = [{"role": "system", "content": prompt}]
     print("ShadDEBUG - get_code_analysis 2a")
     tokens_in_messages = get_num_tokens_from_messages(
         messages=messages, model=model
     )
     print("ShadDEBUG - get_code_analysis 2b")
-    max_tokens = 4096
+    #max_tokens = 4096
+    max_tokens = 32000
     tokens_for_response = max_tokens - tokens_in_messages
 
     print("ShadDEBUG - get_code_analysis 3")

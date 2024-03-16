@@ -221,7 +221,7 @@ def analyze_code_file_original(code_file: str) -> dict[str, str]:
     }
 
 
-def get_code_analysis(code: str) -> str:
+def get_code_analysis(code: str, pylint_report: str) -> str:
     """Get code analysis from the OpenAI API."""
     print("ShadDEBUG - get_code_analysis 1")
     prompt = generate_analysis_prompt(code=code, pylint_report=pylint_report)

@@ -11,8 +11,9 @@ env_file_path = ".env"
 log_file = "app.log"
 temp_dir = "/tmp/chatgpt-code-review"
 
-def analyze_repo(repo_url, extensions, openai_api_key):
-    print("ShadDEBUG: before utils")
+#def analyze_repo(repo_url, extensions, openai_api_key):
+def analyze_repo(repo_url, extensions):
+    print("ShadDEBUG: before utils", flush=True)
     utils.load_environment_variables(env_file_path)
     utils.set_environment_variables()
     utils.configure_logging(log_file)
@@ -25,7 +26,7 @@ def analyze_repo(repo_url, extensions, openai_api_key):
         print("repo_url = " + repo_url)
         print("extensions = " + str(extensions))
         # Clone the repository and list code files
-        print("ShadDEBUG about to list_code_files_in_repository")
+        print("ShadDEBUG about to list_code_files_in_repository", flush=True)
         code_files = repo.list_code_files_in_repository(repo_url, extensions)
         
         if not code_files:
@@ -33,7 +34,7 @@ def analyze_repo(repo_url, extensions, openai_api_key):
 
         # Analyze the selected files
         selected_files = code_files  # Assuming you want to analyze all files found
-        recommendations = query.analyze_code_files(selected_files)
+        recommendations = query.analyze_code_files(selected_files, extensions)
 
     # Format the recommendations for output
     recommendation_list = []

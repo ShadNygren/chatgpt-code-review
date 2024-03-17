@@ -9,15 +9,16 @@ from typing import Iterable
 import openai
 #from openai import OpenAI
 
+import anthropic
+
 from transformers import pipeline, set_seed
 
 import tiktoken
 
 #-------------------------------------------------
 
-#client = OpenAI()
-# Assuming `client` setup for OpenAI is correct
-client = openai.OpenAI()
+
+
 
 #-------------------------------------------------
 # New Stuff for Local
@@ -59,13 +60,13 @@ def run_pylint(filename):
 
 
 # Original renamed and suffixed since identical
-def analyze_code_files(code_files: list[str]) -> Iterable[dict[str, str]]:
+def analyze_code_files(code_files: list[str], extensions: list[str] = None) -> Iterable[dict[str, str]]:
     """Analyze the selected code files and return recommendations."""
-    return (analyze_code_file("/tmp/chatgpt-code-review/" + code_file) for code_file in code_files)
+    return (analyze_code_file("/tmp/chatgpt-code-review/" + code_file, extensions=extensions) for code_file in code_files)
 
 # This is the new version with support for local
 # The original version was renamed and suffixed with _original
-def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
+def analyze_code_file(code_file: str, extensions: list[str] = None) -> dict[str, str]:
     """Analyze a code file and return a dictionary with file information and recommendations."""
     with open(code_file, "r") as f:
         print("ShadDEBUG f.name = " + f.name)
@@ -81,12 +82,15 @@ def analyze_code_file(code_file: str, use_local_model=False) -> dict[str, str]:
     try:
         logging.info("Analyzing code file: %s", code_file)
         print("ShadDEBUG - code content = " + code_content)
+        use_anthropic = extensions["anthropic"]
+        use_local_model = False
         if use_local_model:
             print("ShadDEBUG - get_local_code_analysis in query.py")
             analysis = get_local_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
         else:
             print("ShadDEBUG - get_code_analysis in query.py")
-            analysis = get_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
+            #analysis = get_code_analysis_openai(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
+            analysis = get_code_analysis_anthropic(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
     except Exception as e:
         print("ShadDEBUG Exception e = " + str(e))
         logging.error("Error analyzing code file: %s", code_file)
@@ -208,42 +212,16 @@ def get_num_tokens_from_messages(messages, model: str):
     return num_tokens
 
 
-def analyze_code_files_original(code_files: list[str]) -> Iterable[dict[str, str]]:
-    """Analyze the selected code files and return recommendations."""
-    return (analyze_code_file(code_file) for code_file in code_files)
-
-# Renamed and suffixed with _original
-def analyze_code_file_original(code_file: str) -> dict[str, str]:
-    """Analyze a code file and return a dictionary with file information and recommendations."""
-    with open(code_file, "r") as f:
-        code_content = f.read()
-        print("ShadDEBUG")
-        print("ShadDEBUG code_content = " + code_content)
-
-    if not code_content:
-        return {
-            "code_file": code_file,
-            "code_snippet": code_content,
-            "recommendation": "No code found in file",
-        }
-
-    try:
-        logging.info("Analyzing code file: %s", code_file)
-        analysis = get_code_analysis(code_content)
-    except Exception as e:
-        logging.info("Error analyzing code file: %s", code_file)
-        analysis = f"Error analyzing code file: {e}"
-
-    return {
-        "code_file": code_file,
-        "code_snippet": code_content,
-        "recommendation": analysis,
-    }
 
 
-def get_code_analysis(code: str, pylint_report: str, pytype_report: str) -> str:
+def get_code_analysis_openai(code: str, pylint_report: str, pytype_report: str) -> str:
     """Get code analysis from the OpenAI API."""
     print("ShadDEBUG - get_code_analysis 1")
+
+    #client_openai = OpenAI()
+    # Assuming `client_openai` setup for OpenAI is correct
+    client_openai = openai.OpenAI()
+
     prompt = generate_analysis_prompt(code=code, pylint_report=pylint_report, pytype_report=pytype_report)
     print("ShadDEBUG - get_code_analysis 2")
 
@@ -255,9 +233,11 @@ def get_code_analysis(code: str, pylint_report: str, pytype_report: str) -> str:
     tokens_in_messages = get_num_tokens_from_messages(
         messages=messages, model=model
     )
+    
     print("ShadDEBUG - get_code_analysis 2b")
-    #max_tokens = 4096
-    max_tokens = 32000
+    max_tokens = 4096
+    #max_tokens = 32000
+    
     tokens_for_response = max_tokens - tokens_in_messages
 
     print("ShadDEBUG - get_code_analysis 3")
@@ -268,7 +248,7 @@ def get_code_analysis(code: str, pylint_report: str, pytype_report: str) -> str:
     logging.info("Sending request to OpenAI API for code analysis")
     logging.info("Max response tokens: %d", tokens_for_response)
     print("ShadDEBUG - get_code_analysis 5")
-    response = client.chat.completions.create(model=model,
+    response = client_openai.chat.completions.create(model=model,
         messages=messages,
         max_tokens=tokens_for_response,
         n=1,
@@ -279,6 +259,67 @@ def get_code_analysis(code: str, pylint_report: str, pytype_report: str) -> str:
     print("ShadDEBUG - get_code_analysis 7")
     # Get the assistant's response from the API response
     assistant_response = response.choices[0].message.content
+
+    print("ShadDEBUG - get_code_analysis 8")
+    return assistant_response.strip()
+
+
+
+
+
+
+def get_code_analysis_anthropic(code: str, pylint_report: str, pytype_report: str) -> str:
+    """Get code analysis from the Ahtoropic API."""
+    print("ShadDEBUG - get_code_analysis 1")
+
+    client_anthropic = anthropic.Anthropic(
+        # defaults to os.environ.get("ANTHTOPIC_API_KEY")
+        api_key="my_anthropic_api_key"
+    )
+
+    prompt = generate_analysis_prompt(code=code, pylint_report=pylint_report, pytype_report=pytype_report)
+    print("ShadDEBUG - get_code_analysis 2")
+
+    model="claude-3-sonnet-20240229"
+    
+    # This was the original for openai from the original code repo
+    #messages = [{"role": "system", "content": prompt}]
+    #
+    # This is from anthropic documentation
+    # https://docs.anthropic.com/claude/docs/upgrading-from-the-text-completions-api
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
+
+#    print("ShadDEBUG - get_code_analysis 2a")
+#    tokens_in_messages = get_num_tokens_from_messages(
+#        messages=messages, model=model
+#    )
+#    
+#    print("ShadDEBUG - get_code_analysis 2b")
+#    max_tokens = 4096
+#    #max_tokens = 32000
+#    
+#    tokens_for_response = max_tokens - tokens_in_messages
+    tokens_for_response = 4096
+#
+#    print("ShadDEBUG - get_code_analysis 3")
+#    if tokens_for_response < 200:
+#        return "The code file is too long to analyze. Please select a shorter file."
+
+    print("ShadDEBUG - get_code_analysis 4")
+    logging.info("Sending request to OpenAI API for code analysis")
+#    logging.info("Max response tokens: %d", tokens_for_response)
+    print("ShadDEBUG - get_code_analysis 5")
+    response = client_anthropic.messages.create(model=model,
+        messages=messages,
+        system="You are an expert at doing software code reviews for the Python language",
+        max_tokens=tokens_for_response,
+        temperature=0)
+    print("ShadDEBUG - get_code_analysis 6")
+    logging.info("Received response from OpenAI API")
+
+    print("ShadDEBUG - get_code_analysis 7")
+    # Get the assistant's response from the API response
+    assistant_response = response.content
 
     print("ShadDEBUG - get_code_analysis 8")
     return assistant_response.strip()

@@ -20,7 +20,7 @@ def main():
     print("ShadDEBUG main - args = " + str(args))
     if args.anthropic != None:
         print("ShadDEBUG Anthropic")
-    exit()
+    #exit()
     logging.info("ShadDEBUG after parse arguments - before results")
 
     # Call the refactored analyze_repo function

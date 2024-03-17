@@ -12,7 +12,7 @@ log_file = "app.log"
 temp_dir = "/tmp/chatgpt-code-review"
 
 #def analyze_repo(repo_url, extensions, openai_api_key):
-def analyze_repo(repo_url, extensions):
+def analyze_repo(repo_url, extensions, args):
     print("ShadDEBUG: before utils", flush=True)
     utils.load_environment_variables(env_file_path)
     utils.set_environment_variables()
@@ -34,7 +34,7 @@ def analyze_repo(repo_url, extensions):
 
         # Analyze the selected files
         selected_files = code_files  # Assuming you want to analyze all files found
-        recommendations = query.analyze_code_files(selected_files, extensions)
+        recommendations = query.analyze_code_files(selected_files, extensions, args)
 
     # Format the recommendations for output
     recommendation_list = []

@@ -17,11 +17,15 @@ def main():
     #parser.add_argument("--openai_api_key", required=True, help="OpenAI API Key")
 
     args = parser.parse_args()
+    print("ShadDEBUG main - args = " + str(args))
+    if args.anthropic != None:
+        print("ShadDEBUG Anthropic")
+    exit()
     logging.info("ShadDEBUG after parse arguments - before results")
 
     # Call the refactored analyze_repo function
     #results = analyze_repo(repo_url=args.repo_url, extensions=args.extensions, openai_api_key=args.openai_api_key)
-    results = analyze_repo(repo_url=args.repo_url, extensions=args.extensions)
+    results = analyze_repo(repo_url=args.repo_url, args=args, extensions=args.extensions)
 
     logging.info("ShadDEBUG after results")
 

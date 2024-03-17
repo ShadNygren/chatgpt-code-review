@@ -60,16 +60,17 @@ def run_pylint(filename):
 
 
 # Original renamed and suffixed since identical
-def analyze_code_files(code_files: list[str], extensions: list[str] = None) -> Iterable[dict[str, str]]:
+def analyze_code_files(code_files: list[str], args, extensions: list[str] = None) -> Iterable[dict[str, str]]:
     """Analyze the selected code files and return recommendations."""
-    return (analyze_code_file("/tmp/chatgpt-code-review/" + code_file, extensions=extensions) for code_file in code_files)
+    return (analyze_code_file("/tmp/chatgpt-code-review/" + code_file, args=args, extensions=extensions) for code_file in code_files)
 
 # This is the new version with support for local
 # The original version was renamed and suffixed with _original
-def analyze_code_file(code_file: str, extensions: list[str] = None) -> dict[str, str]:
+def analyze_code_file(code_file: str, args, extensions: list[str] = None) -> dict[str, str]:
     """Analyze a code file and return a dictionary with file information and recommendations."""
+    print("ShadDEBUG analyze_code_file - args = " + str(args))
     with open(code_file, "r") as f:
-        print("ShadDEBUG f.name = " + f.name)
+        print("ShadDEBUG query.py - f.name = " + f.name)
         code_content = f.read()
 
     if not code_content:
@@ -81,16 +82,18 @@ def analyze_code_file(code_file: str, extensions: list[str] = None) -> dict[str,
 
     try:
         logging.info("Analyzing code file: %s", code_file)
-        print("ShadDEBUG - code content = " + code_content)
-        use_anthropic = extensions["anthropic"]
-        use_local_model = False
-        if use_local_model:
+        print("ShadDEBUG query.py - code content = " + code_content)
+        print("ShadDEBUG query.py - extensions = " + str(extensions))
+        #use_local_model = False
+        if args.local != None:
             print("ShadDEBUG - get_local_code_analysis in query.py")
             analysis = get_local_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
         else:
             print("ShadDEBUG - get_code_analysis in query.py")
-            #analysis = get_code_analysis_openai(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
-            analysis = get_code_analysis_anthropic(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
+            if args.anthropic != None:
+                analysis = get_code_analysis_anthropic(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
+            elif args.openai != None:
+                analysis = get_code_analysis_openai(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
     except Exception as e:
         print("ShadDEBUG Exception e = " + str(e))
         logging.error("Error analyzing code file: %s", code_file)

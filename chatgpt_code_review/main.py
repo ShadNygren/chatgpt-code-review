@@ -11,14 +11,16 @@ def main():
     parser = argparse.ArgumentParser(description="ChatGPT Code Review CLI")
     parser.add_argument("--repo_url", required=True, help="GitHub Repository URL")
     parser.add_argument("--extensions", nargs='+', help="File extensions to analyze")
-    parser.add_argument("--local", nargs="*")
+    parser.add_argument("--llama", nargs="*")
     parser.add_argument("--openai", nargs="*")
     parser.add_argument("--anthropic", nargs="*")
     #parser.add_argument("--openai_api_key", required=True, help="OpenAI API Key")
 
     args = parser.parse_args()
     print("ShadDEBUG main - args = " + str(args))
-    if args.anthropic != None:
+    if "anthropic" in args:
+        print("ShadDEBUG Anthropic")
+    if "openai" in args:
         print("ShadDEBUG Anthropic")
     #exit()
     logging.info("ShadDEBUG after parse arguments - before results")

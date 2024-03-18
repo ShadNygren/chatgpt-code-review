@@ -80,20 +80,24 @@ def analyze_code_file(code_file: str, args, extensions: list[str] = None) -> dic
     #print(pylint_report)
     pytype_report = run_pytype(code_file)
 
+    analysis = None
     try:
         logging.info("Analyzing code file: %s", code_file)
         print("ShadDEBUG query.py - code content = " + code_content)
         print("ShadDEBUG query.py - extensions = " + str(extensions))
         #use_local_model = False
-        if args.local != None:
+        if "llama" in args:
             print("ShadDEBUG - get_local_code_analysis in query.py")
             analysis = get_local_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
         else:
-            print("ShadDEBUG - get_code_analysis in query.py")
-            if args.anthropic != None:
+            print("ShadDEBUG - get_code_analysis in query.py - NOT Using Llama")
+            if "anthropic" in args:
+                print("ShadDEBUG - get_code_analysis in query.py - Using Anthropic")
                 analysis = get_code_analysis_anthropic(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
-            elif args.openai != None:
+            elif "openai" in args:
+                print("ShadDEBUG - get_code_analysis in query.py - Using OpenAI")
                 analysis = get_code_analysis_openai(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
+        print("ShadDEBUG - get_code_analysis in query.py - Got analysis")    
     except Exception as e:
         print("ShadDEBUG Exception e = " + str(e))
         logging.error("Error analyzing code file: %s", code_file)

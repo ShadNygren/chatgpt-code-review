@@ -68,7 +68,7 @@ def analyze_code_files(code_files: list[str], args, extensions: list[str] = None
 # The original version was renamed and suffixed with _original
 def analyze_code_file(code_file: str, args, extensions: list[str] = None) -> dict[str, str]:
     """Analyze a code file and return a dictionary with file information and recommendations."""
-    print("ShadDEBUG analyze_code_file - args = " + str(args))
+    print("ShadDEBUG -query.py analyze_code_file - args == " + str(args))
     with open(code_file, "r") as f:
         print("ShadDEBUG query.py - f.name = " + f.name)
         code_content = f.read()
@@ -83,21 +83,23 @@ def analyze_code_file(code_file: str, args, extensions: list[str] = None) -> dic
     analysis = None
     try:
         logging.info("Analyzing code file: %s", code_file)
-        print("ShadDEBUG query.py - code content = " + code_content)
-        print("ShadDEBUG query.py - extensions = " + str(extensions))
+        print("ShadDEBUG - query.py - code content = " + code_content)
+        print("ShadDEBUG - query.py - extensions = " + str(extensions))
         #use_local_model = False
         if "llama" in args:
             print("ShadDEBUG - get_local_code_analysis in query.py")
             analysis = get_local_code_analysis(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
         else:
-            print("ShadDEBUG - get_code_analysis in query.py - NOT Using Llama")
+            print("ShadDEBUG - query.py - get_code_analysis in query.py - NOT Using Llama")
+            print("ShadDEBUG - query.py - FORCE THE USE OF ANTHROPIC")
+            analysis = get_code_analysis_anthropic(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
             if "anthropic" in args:
-                print("ShadDEBUG - get_code_analysis in query.py - Using Anthropic")
+                print("ShadDEBUG - query.py - get_code_analysis in query.py - Using Anthropic")
                 analysis = get_code_analysis_anthropic(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
             elif "openai" in args:
-                print("ShadDEBUG - get_code_analysis in query.py - Using OpenAI")
+                print("ShadDEBUG - query.py - get_code_analysis in query.py - Using OpenAI")
                 analysis = get_code_analysis_openai(code=code_content, pylint_report=pylint_report, pytype_report=pytype_report)
-        print("ShadDEBUG - get_code_analysis in query.py - Got analysis")    
+        print("ShadDEBUG - query.py - get_code_analysis in query.py - Got analysis")    
     except Exception as e:
         print("ShadDEBUG Exception e = " + str(e))
         logging.error("Error analyzing code file: %s", code_file)
@@ -321,12 +323,13 @@ def get_code_analysis_anthropic(code: str, pylint_report: str, pytype_report: st
         system="You are an expert at doing software code reviews for the Python language",
         max_tokens=tokens_for_response,
         temperature=0)
-    print("ShadDEBUG - get_code_analysis 6")
+    print("ShadDEBUG - query.py - get_code_analysis 6 - response == " + str(response))
     logging.info("Received response from OpenAI API")
 
-    print("ShadDEBUG - get_code_analysis 7")
+    print("ShadDEBUG - query.py - get_code_analysis 7 - response.content == " + str(response.content))
     # Get the assistant's response from the API response
     assistant_response = response.content
 
-    print("ShadDEBUG - get_code_analysis 8")
+    print("ShadDEBUG - query.py - get_code_analysis 8 - assistant_response.strip() == " + str(assistant_response.strip()))
+    exit()
     return assistant_response.strip()
